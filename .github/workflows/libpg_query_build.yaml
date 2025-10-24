@@ -47,7 +47,7 @@ jobs:
           foreach ($ext in $extensions) {
             $file = "libpg_query.$ext"
             if (Test-Path $file) {
-              Copy-Item -Path $file -Destination "artifacts/${{ matrix.artifacts_path }}/libpg_query.$ext" -Force
+              Copy-Item -Path $file -Destination "${{ matrix.artifacts_path }}/libpg_query.$ext" -Force
               break
             }
           }
