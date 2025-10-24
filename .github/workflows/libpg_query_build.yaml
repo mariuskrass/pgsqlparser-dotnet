@@ -8,13 +8,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifacts_path: artifacts/linux-x64
+            artifact_path: "artifacts/linux-x64"
           - os: windows-latest
-            artifacts_path: artifacts/win-x64
+            artifact_path: "artifacts/win-x64"
           - os: macos-13
-            artifacts_path: artifacts/osx-x64
+            artifact_path: "artifacts/osx-x64"  
           - os: macos-latest
-            artifacts_path: artifacts/osx-arm64
+            artifact_path: "artifacts/osx-arm64"
       fail-fast: false
     runs-on: ${{ matrix.os }} 
     steps:
@@ -30,7 +30,7 @@ jobs:
         shell: pwsh
       - name: Create artifacts folder
         run: |
-          New-Item -Path "${{ matrix.artifacts_path }}" -ItemType Directory -Force
+          New-Item -Path ${{ matrix.artifact_path }} -ItemType Directory -Force
         shell: pwsh
         working-directory: src/libpg_query
       - name: Setup Developer Command Prompt
@@ -47,7 +47,7 @@ jobs:
           foreach ($ext in $extensions) {
             $file = "libpg_query.$ext"
             if (Test-Path $file) {
-              Copy-Item -Path $file -Destination "${{ matrix.artifacts_path }}/libpg_query.$ext" -Force
+              Copy-Item -Path $file -Destination "artifacts/$artifact_name/libpg_query.$ext" -Force
               break
             }
           }
@@ -60,3 +60,44 @@ jobs:
           path: src/libpg_query/artifacts
           retention-days: 1
           overwrite: true
+  
+  create-single-artifact-job:
+    needs: build-job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get current date
+        run: |
+          $date = Get-Date -Format "yyyy-MM-dd"
+          Add-Content -Path $env:GITHUB_ENV -Value "date=$date"
+        shell: pwsh
+      - name: Download all artifacts
+        run: |
+          gh run download --repo ${{ github.repository }} --dir final-artifacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: restructure folders for single artifact
+        run: |
+          # Move all files and folders from 'build-artifacts' inside 'final-artifacts' to parent folder
+          for dir in final-artifacts/build-artifacts*; do
+            if [ -d "$dir" ]; then
+              cp -R "$dir"/* final-artifacts/
+              rm -rf "$dir"
+            fi
+          done
+        shell: bash
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-${{ env.date }}
+          path: |
+            final-artifacts/*
+            !final-artifacts/artifacts-*
+          retention-days: 1
+      - name: Delete intermediate artifacts
+        run: |
+          for id in $(gh api repos/${{ github.repository }}/actions/artifacts --jq '.artifacts[] | select(.name | test("^artifacts-") | not) | .id'); do
+            gh api --method DELETE repos/${{ github.repository }}/actions/artifacts/$id
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
