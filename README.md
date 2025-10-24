@@ -12,7 +12,7 @@ You can find further background to why a query's parse tree is useful here: http
 dotnet add package pg_query 
 ```
 
-Note that the libpg_query libs for all OS'es are already packaged with the assembly.
+Note that the pg_query libs for all OS'es are already packaged with the assembly.
 
 ## Usage
 
