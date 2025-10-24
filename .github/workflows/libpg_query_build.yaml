@@ -9,12 +9,16 @@ jobs:
         include:
           - os: ubuntu-latest
             artifacts_path: artifacts/linux-x64
+            make_file: Makefile
           - os: windows-latest
             artifacts_path: artifacts/win-x64
+            make_file: Makefile.msvc
           - os: macos-13
             artifacts_path: artifacts/osx-x64
+            make_file: Makefile
           - os: macos-latest
             artifacts_path: artifacts/osx-arm64
+            make_file: Makefile
       fail-fast: false
     runs-on: ${{ matrix.os }} 
     steps:
@@ -32,10 +36,10 @@ jobs:
         run: |
           New-Item -Path "${{ matrix.artifacts_path }}" -ItemType Directory -Force
         shell: pwsh
-        working-directory: src/libpg_query/src
+        working-directory: src/libpg_query
       - name: Build artifacts
         run: |
-          make build_shared
+          make -f "${{ matrix.make_file }}" build_shared
           $extensions = @("dll","so","dylib")
           foreach ($ext in $extensions) {
             $file = "build/libpg_query.$ext"
@@ -45,11 +49,11 @@ jobs:
             }
           }
         shell: pwsh
-        working-directory: src/libpg_query/src
+        working-directory: src/libpg_query
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-artifacts-$${{ env.date }}
-          path: src/libpg_query/src/artifacts
+          path: src/libpg_query/artifacts
           retention-days: 1
           overwrite: true
