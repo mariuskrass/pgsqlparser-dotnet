@@ -33,6 +33,9 @@ jobs:
           New-Item -Path "${{ matrix.artifacts_path }}" -ItemType Directory -Force
         shell: pwsh
         working-directory: src/libpg_query
+      - name: Setup Developer Command Prompt
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
       - name: Build artifacts
         run: |
           if ($env:RUNNER_OS -eq 'Windows') {
