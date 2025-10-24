@@ -1,0 +1,52 @@
+name: Build
+on:
+  workflow_dispatch:
+
+jobs:
+  build-job:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifacts_path: artifacts/linux-x64
+          - os: windows-latest
+            artifacts_path: artifacts/win-x64
+          - os: macos-13
+            artifacts_path: artifacts/osx-x64
+          - os: macos-latest
+            artifacts_path: artifacts/osx-arm64
+      fail-fast: false
+    runs-on: ${{ matrix.os }} 
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Get current date
+        run: |
+          $date = Get-Date -Format "yyyy-MM-dd"
+          Add-Content -Path $env:GITHUB_ENV -Value "date=$date"
+        shell: pwsh
+      - name: Create artifacts folder
+        run: |
+          New-Item -Path "${{ matrix.artifacts_path }}" -ItemType Directory -Force
+        shell: pwsh
+        working-directory: src/libpg_query
+      - name: Build artifacts
+        run: |
+          make build_shared
+          $extensions = @("dll","so","dylib")
+          foreach ($ext in $extensions) {
+            $file = "build/libpg_query.$ext"
+            if (Test-Path $file) {
+              Copy-Item -Path $file -Destination "${{ matrix.artifacts_path }}/libpg_query.$ext" -Force
+              break
+            }
+          }
+        shell: pwsh
+        working-directory: src/libpg_query
+        - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-$${{ env.date }}
+          path: src/libpg_query/artifacts
+          retention-days: 1
+          overwrite: true
