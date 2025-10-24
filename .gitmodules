@@ -1,3 +1,0 @@
-[submodule "src/PgQuery/libpg_query"]
-	path = src/libpg_query
-	url = https://github.com/mysticmind/libpg_query
