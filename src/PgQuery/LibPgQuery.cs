@@ -177,8 +177,8 @@ public static class LibPgQuery
     // [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     // public static extern void pg_query_exit();
 
-    public const string PG_MAJORVERSION = "17";
-    public const string PG_VERSION = "17.5";
-    public const int PG_VERSION_NUM = 170005;
+    public const string PgMajorVersion = "17";
+    public const string PgVersion = "17.5";
+    public const int PgVersionNum = 170005;
 }
 
