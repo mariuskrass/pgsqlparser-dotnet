@@ -43,7 +43,7 @@ jobs:
           }
         shell: pwsh
         working-directory: src/libpg_query
-        - name: Upload artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-artifacts-$${{ env.date }}
