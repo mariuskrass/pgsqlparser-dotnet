@@ -1,0 +1,16 @@
+.vs
+obj
+bin
+bin/*
+deploy
+deploy/*
+_ReSharper.*
+*.user
+*.suo
+*.cache
+*.Cache
+Thumbs.db
+**/packages
+.idea
+*.received.*
+.DS_Store

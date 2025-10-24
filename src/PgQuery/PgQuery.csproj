@@ -1,0 +1,75 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>12.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.25.3" />
+    <PackageReference Include="Grpc.Tools" Version="2.72.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Default to the SDK's own RID if user hasn't specified one -->
+    <TargetRID Condition="'$(RuntimeIdentifier)'==''">$(NETCoreSdkRuntimeIdentifier)</TargetRID>
+    <LibPgQueryDllName>libpg_query</LibPgQueryDllName>
+  </PropertyGroup>
+
+  <!-- Copy only native libs for current RID for dev-->
+  <ItemGroup Condition=" '$(TargetRID)' == 'linux-x64' ">
+    <None Include="Native\linux-x64\$(LibPgQueryDllName).so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>libpg_query.dylib</TargetPath>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition=" '$(TargetRID)' == 'win-x64' ">
+    <None Include="Native\win-x64\$(LibPgQueryDllName).dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>libpg_query.dylib</TargetPath>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition=" '$(TargetRID)' == 'osx-arm64' ">
+    <None Include="Native\osx-arm64\$(LibPgQueryDllName).dylib">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>libpg_query.dylib</TargetPath>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition=" '$(TargetRID)' == 'osx-x64' ">
+    <None Include="Native\osx-x64\$(LibPgQueryDllName).dylib">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>libpg_query.dylib</TargetPath>
+    </None>
+  </ItemGroup>
+
+  <!-- Include all for NuGet packaging -->
+  <ItemGroup>
+    <None Include="Native\**\*.*">
+      <Pack>true</Pack>
+      <PackagePath>runtimes/%(RecursiveDir)native/%(Filename)%(Extension)</PackagePath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Protobuf Include="pg_query.proto">
+      <GrpcServices>None</GrpcServices>
+      <Access>Public</Access>
+      <ProtoCompile>True</ProtoCompile>
+      <ProtoRoot>.</ProtoRoot>
+      <CompileOutputs>True</CompileOutputs>
+      <OutputDir>$(BaseIntermediateOutputPath)$(TargetFramework)\</OutputDir>
+      <Generator>MSBuild:Compile</Generator>
+    </Protobuf>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Native\linux-x64\" />
+    <Folder Include="Native\osx-x64\" />
+    <Folder Include="Native\win-x64\" />
+  </ItemGroup>
+
+</Project>
