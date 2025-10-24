@@ -14,3 +14,6 @@ Thumbs.db
 .idea
 *.received.*
 .DS_Store
+libpg_query.dll
+libpg_query.so
+libpg_query.dylib
