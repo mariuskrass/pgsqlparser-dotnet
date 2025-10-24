@@ -8,13 +8,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_path: "artifacts/linux-x64"
+            artifacts_path: "artifacts/linux-x64"
           - os: windows-latest
-            artifact_path: "artifacts/win-x64"
+            artifacts_path: "artifacts/win-x64"
           - os: macos-13
-            artifact_path: "artifacts/osx-x64"  
+            artifacts_path: "artifacts/osx-x64"  
           - os: macos-latest
-            artifact_path: "artifacts/osx-arm64"
+            artifacts_path: "artifacts/osx-arm64"
       fail-fast: false
     runs-on: ${{ matrix.os }} 
     steps:
@@ -30,7 +30,7 @@ jobs:
         shell: pwsh
       - name: Create artifacts folder
         run: |
-          New-Item -Path ${{ matrix.artifact_path }} -ItemType Directory -Force
+          New-Item -Path ${{ matrix.artifacts_path }} -ItemType Directory -Force
         shell: pwsh
         working-directory: src/libpg_query
       - name: Setup Developer Command Prompt
@@ -47,7 +47,7 @@ jobs:
           foreach ($ext in $extensions) {
             $file = "libpg_query.$ext"
             if (Test-Path $file) {
-              Copy-Item -Path $file -Destination "artifacts/$artifact_name/libpg_query.$ext" -Force
+              Copy-Item -Path $file -Destination "artifacts/${{ matrix.artifacts_path }}/libpg_query.$ext" -Force
               break
             }
           }
