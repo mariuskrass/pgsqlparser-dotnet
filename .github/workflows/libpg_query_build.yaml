@@ -45,7 +45,7 @@ jobs:
           }
           $extensions = @("dll","so","dylib")
           foreach ($ext in $extensions) {
-            $file = "build/libpg_query.$ext"
+            $file = "libpg_query.$ext"
             if (Test-Path $file) {
               Copy-Item -Path $file -Destination "${{ matrix.artifacts_path }}/libpg_query.$ext" -Force
               break
