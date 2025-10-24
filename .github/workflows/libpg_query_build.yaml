@@ -1,4 +1,4 @@
-name: Build
+name: libpg_query Build
 on:
   workflow_dispatch:
 
