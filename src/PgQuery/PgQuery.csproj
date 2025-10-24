@@ -1,10 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>.NET wrapper on libpg_query to access PostgreSQL parser outside of the server environment</Description>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <Authors>Babu Annamalai</Authors>
     <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>12.0</LangVersion>
+    <PackageProjectUrl>https://github.com/mysticmind/pg_query-dotnet</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>postgres;pg;postgresql;postgres-query-parser;libpg_query</PackageTags>
+    <AssemblyName>pgquery</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -52,7 +59,6 @@
     <None Include="Native\**\*.*">
       <Pack>true</Pack>
       <PackagePath>runtimes/%(RecursiveDir)native/%(Filename)%(Extension)</PackagePath>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>
