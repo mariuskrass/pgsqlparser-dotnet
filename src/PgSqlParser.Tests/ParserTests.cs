@@ -2,9 +2,9 @@ using System.Text.RegularExpressions;
 using Shouldly;
 using Xunit;
 
-namespace PgQuery.Tests;
+namespace PgSqlParser.Tests;
 
-public class PgParserTests
+public class ParserTests
 {
     private IEnumerable<string> ReadLines(string path)
     {
@@ -16,7 +16,7 @@ public class PgParserTests
     }
     
     [Fact]
-    public void NormalizeTests()
+    public void Normalize()
     {
         var items = ReadLines("normalize_tests.txt").ToArray();
         for (var i = 0; i < items.Length; i += 2)
@@ -29,7 +29,7 @@ public class PgParserTests
     }
     
     [Fact]
-    public void NormalizeUtilityTests()
+    public void NormalizeUtility()
     {
         var items = ReadLines("normalize_utility_tests.txt").ToArray();
         for (var i = 0; i < items.Length; i += 2)
@@ -42,7 +42,7 @@ public class PgParserTests
     }
     
     [Fact]
-    public void ParseTests()
+    public void Parse()
     {
         var items = ReadLines("parse_tests.txt").ToArray();
         for (var i = 0; i < items.Length; i += 2)
@@ -55,7 +55,7 @@ public class PgParserTests
     }
     
     [Fact]
-    public void ParseOptsTests()
+    public void ParseOpts()
     {
         var items = ReadLines("parse_with_opts_tests.txt").ToArray();
         for (var i = 0; i < items.Length; i += 3)
@@ -69,7 +69,7 @@ public class PgParserTests
     }
     
     [Fact]
-    public void DeParseOptsTests()
+    public void DeParseOpts()
     {
         var items = ReadLines("deparse_tests.txt").ToArray();
         for (var i = 0; i < items.Length; i += 1)

@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PgQuery", "PgQuery\PgQuery.csproj", "{F214CBFB-5DD0-4ADE-A713-AFACBD58A36F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PgSqlParser", "PgSqlParser\PgSqlParser.csproj", "{F214CBFB-5DD0-4ADE-A713-AFACBD58A36F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PgQuery.Tests", "PgQuery.Tests\PgQuery.Tests.csproj", "{20DB9BE9-B085-4476-93F2-89BBDBCAA6C8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PgSqlParser.Tests", "PgSqlParser.Tests\PgSqlParser.Tests.csproj", "{20DB9BE9-B085-4476-93F2-89BBDBCAA6C8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

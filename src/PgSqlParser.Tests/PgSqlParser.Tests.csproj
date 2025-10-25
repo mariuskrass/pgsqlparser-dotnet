@@ -7,6 +7,7 @@
 
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
+        <RootNamespace>PgSqlParser.Tests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -16,7 +17,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\PgQuery\PgQuery.csproj" />
+      <ProjectReference Include="..\PgSqlParser\PgSqlParser.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -11,7 +11,8 @@
     <PackageProjectUrl>https://github.com/mysticmind/pg_query-dotnet</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>postgres;pg;postgresql;postgres-query-parser;libpg_query</PackageTags>
-    <AssemblyName>pg_query</AssemblyName>
+    <AssemblyName>pgsqlparser</AssemblyName>
+    <RootNamespace>PgSqlParser</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -62,8 +63,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Protobuf Include="pg_query.proto">
-      <GrpcServices>None</GrpcServices>
+    <Protobuf Include="pg_query.proto" GrpcServices="None">
       <Access>Public</Access>
       <ProtoCompile>True</ProtoCompile>
       <ProtoRoot>.</ProtoRoot>

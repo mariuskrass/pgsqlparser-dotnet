@@ -4,6 +4,9 @@ syntax = "proto3";
 
 package pg_query;
 
+// protoc cli support for csharp isn't there so have to settle with using this.
+option csharp_namespace = "PgSqlParser";
+
 message ParseResult {
   int32 version = 1;
   repeated RawStmt stmts = 2;

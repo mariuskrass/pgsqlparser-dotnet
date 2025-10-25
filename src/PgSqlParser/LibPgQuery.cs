@@ -1,4 +1,4 @@
-namespace PgQuery;
+namespace PgSqlParser;
 
 using System;
 using System.Runtime.InteropServices;
