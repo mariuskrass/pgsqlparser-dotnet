@@ -27,28 +27,36 @@
     <!-- Default to the SDK's own RID if user hasn't specified one -->
     <TargetRID Condition="'$(RuntimeIdentifier)'==''">$(NETCoreSdkRuntimeIdentifier)</TargetRID>
     <LibPgQueryDllName>libpg_query</LibPgQueryDllName>
+    <!-- Detect OS -->
+    <OSName Condition=" '$(OS)' == 'Windows_NT' ">win</OSName>
+    <OSName Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' == 'true' ">osx</OSName>
+    <OSName Condition=" '$(OSName)' == '' ">linux</OSName>
+    <!-- Detect Architecture -->
+    <ArchName>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)</ArchName>
+    <!-- Computed Platform RID -->
+    <PlatformRID>$(OSName)-$([System.String]::Copy('$(ArchName)').ToLowerInvariant())</PlatformRID>
   </PropertyGroup>
 
-  <!-- Copy only native libs for current RID for dev-->
-  <ItemGroup Condition=" '$(TargetRID)' == 'linux-x64' ">
+  <!-- Copy only native libs based on computed PlatformRID for dev-->
+  <ItemGroup Condition=" '$(PlatformRID)' == 'linux-x64' ">
     <None Include="Native\linux-x64\$(LibPgQueryDllName).so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>libpg_query.dylib</TargetPath>
     </None>
   </ItemGroup>
-  <ItemGroup Condition=" '$(TargetRID)' == 'win-x64' ">
+  <ItemGroup Condition=" '$(PlatformRID)' == 'win-x64' ">
     <None Include="Native\win-x64\$(LibPgQueryDllName).dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>libpg_query.dylib</TargetPath>
     </None>
   </ItemGroup>
-  <ItemGroup Condition=" '$(TargetRID)' == 'osx-arm64' ">
+  <ItemGroup Condition=" '$(PlatformRID)' == 'osx-arm64' ">
     <None Include="Native\osx-arm64\$(LibPgQueryDllName).dylib">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>libpg_query.dylib</TargetPath>
     </None>
   </ItemGroup>
-  <ItemGroup Condition=" '$(TargetRID)' == 'osx-x64' ">
+  <ItemGroup Condition=" '$(PlatformRID)' == 'osx-x64' ">
     <None Include="Native\osx-x64\$(LibPgQueryDllName).dylib">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>libpg_query.dylib</TargetPath>
