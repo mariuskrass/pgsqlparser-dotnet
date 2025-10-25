@@ -7,7 +7,7 @@ You can find further background to why a query's parse tree is useful here: [htt
 ## Installation
 
 ```csharp
-dotnet add package pg_query 
+dotnet add package pgsqlparser
 ```
 
 Note that the libpg_query libs for all OS'es are already packaged with the assembly.
