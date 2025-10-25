@@ -10,7 +10,7 @@
     <LangVersion>12.0</LangVersion>
     <PackageProjectUrl>https://github.com/mysticmind/pgsqlparser-dotnet</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageTags>postgres;pg;postgresql;postgres-parser;libpg_query;sql-parser;parser</PackageTags>
+    <PackageTags>postgres;pg;pgsql;postgresql;postgres-parser;libpg_query;sql-parser;parser;query-parser</PackageTags>
     <AssemblyName>pgsqlparser</AssemblyName>
     <RootNamespace>PgSqlParser</RootNamespace>
   </PropertyGroup>
