@@ -1,0 +1,31 @@
+name: CI Build
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+
+jobs:
+  job:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-13, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+      - name: Install .NET 9.0.x
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Display dotnet info
+        run: dotnet --list-sdks  
+      - name: Run tests
+        run: dotnet test src/PgSqlParser.Tests/PgSqlParser.Tests.csproj --framework net9.0
