@@ -29,10 +29,41 @@ public readonly struct Result<T>
     public static Result<T> Failure(Error error) => new(error);
 }
 
-public record QuerySplitStmt(int Location, int Length, string Text);
+public class SplitResult
+{
+    public List<SplitStmt> Statements { get; init; } = [];
+}
+
+public record SplitStmt(int Location, int Length, string Text);
+
+[Flags]
+public enum ParserOptions
+{
+    Default = 0,
+    TypeName = 1,
+    PlpgsqlExpr = 2,
+    PlpgsqlAssign1 = 3,
+    PlpgsqlAssign2 = 4,
+    PlpgsqlAssign3 = 5,
+
+    // Flags
+    DisableBackslashQuote = 16,
+    DisableStandardConformingStrings = 32,
+    DisableEscapeStringWarning = 64
+}
 
 public static class Parser
 {
+    public static string PgMajorVersion => LibPgQuery.PgMajorVersion;
+    public static string PgVersion => LibPgQuery.PgVersion;
+    public static int PgVersionNum => LibPgQuery.PgVersionNum;
+
+    /// <summary>
+    /// Transform DML query (SELECT, INSERT, UPDATE, DELETE) into a canonical form
+    /// by replacing literal values (constants) with placeholders ($1, $2)
+    /// </summary>
+    /// <param name="query"></param>
+    /// <returns></returns>
     public static Result<string> Normalize(string query)
     {
         var result = LibPgQuery.pg_query_normalize(query);
@@ -49,11 +80,24 @@ public static class Parser
         }
     }
     
+    /// <summary>
+    /// Async transform DML query (SELECT, INSERT, UPDATE, DELETE) into a canonical form
+    /// by replacing literal values (constants) with placeholders ($1, $2)
+    /// </summary>
+    /// <param name="query"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public static Task<Result<string>> NormalizeAsync(string query, CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Normalize(query), cancellationToken);
     }
 
+    /// <summary>
+    /// Transform DDL and other utility commands (CREATE TABLE, ALTER TABLE, VACUUM, and ANALYZE et.al.)
+    /// into a canonical form by replacing literal values (constants) with placeholders ($1, $2)
+    /// </summary>
+    /// <param name="query"></param>
+    /// <returns></returns>
     public static Result<string> NormalizeUtility(string query)
     {
         var result = LibPgQuery.pg_query_normalize_utility(query);
@@ -70,11 +114,23 @@ public static class Parser
         }
     }
 
+    /// <summary>
+    /// Async transform DDL and other utility commands (CREATE TABLE, ALTER TABLE, VACUUM, and ANALYZE et.al.)
+    /// into a canonical form by replacing literal values (constants) with placeholders ($1, $2)
+    /// </summary>
+    /// <param name="query"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public static Task<Result<string>> NormalizeUtilityAsync(string query, CancellationToken cancellationToken = default)
     {
         return RunAsync(() => NormalizeUtility(query), cancellationToken);
     }
 
+    /// <summary>
+    /// Tokenize a query
+    /// </summary>
+    /// <param name="query"></param>
+    /// <returns></returns>
     public static Result<ScanResult> Scan(string query)
     {
         var result = LibPgQuery.pg_query_scan(query);
@@ -90,75 +146,23 @@ public static class Parser
         }
     }
     
+    /// <summary>
+    /// Async tokenize a query
+    /// </summary>
+    /// <param name="query"></param>
+    /// <returns></returns>
     public static Task<Result<ScanResult>> ScanAsync(string query, CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Scan(query), cancellationToken);
     }
-
-    public static Result<string> Parse(string query)
-    {
-        var result = LibPgQuery.pg_query_parse(query);
-
-        try
-        {
-            return result.error == IntPtr.Zero
-                ? Result<string>.Success(Marshal.PtrToStringUTF8(result.parse_tree) ?? string.Empty)
-                : Result<string>.Failure(ParseError(result.error));
-        }
-        finally
-        {
-            LibPgQuery.pg_query_free_parse_result(result);
-        }
-    }
-
-    public static Task<Result<string>> ParseAsync(string query, CancellationToken cancellationToken = default)
-    {
-        return RunAsync(() => Parse(query), cancellationToken);
-    }
-
-    public static Result<string> ParseOpts(string query, LibPgQuery.PgQueryParserOptions parserOptions = LibPgQuery.PgQueryParserOptions.Default)
-    {
-        var result = LibPgQuery.pg_query_parse_opts(query, (int)parserOptions);
-
-        try
-        {
-            return result.error == IntPtr.Zero
-                ? Result<string>.Success(Marshal.PtrToStringUTF8(result.parse_tree) ?? string.Empty)
-                : Result<string>.Failure(ParseError(result.error));
-        }
-        finally
-        {
-            LibPgQuery.pg_query_free_parse_result(result);
-        }
-    }
-
-    public static Task<Result<string>> ParseOptsAsync(string query, LibPgQuery.PgQueryParserOptions parserOptions = LibPgQuery.PgQueryParserOptions.Default, CancellationToken cancellationToken = default)
-    {
-        return RunAsync(() => ParseOpts(query, parserOptions), cancellationToken);
-    }
-
-    public static Result<ParseResult?> ParseProtoBuf(string query)
-    {
-        var result = LibPgQuery.pg_query_parse_protobuf(query);
-
-        try
-        {
-            return result.error == IntPtr.Zero 
-                ? Result<ParseResult?>.Success(ParseResult.Parser.ParseFrom(ReadProtobuf(result.parse_tree))) 
-                : Result<ParseResult?>.Failure(ParseError(result.error));
-        }
-        finally
-        {
-            LibPgQuery.pg_query_free_protobuf_parse_result(result);
-        }
-    }
-
-    public static Task<Result<ParseResult?>> ParseProtoBufAsync(string query, CancellationToken cancellationToken = default)
-    {
-        return RunAsync(() => ParseProtoBuf(query), cancellationToken);
-    }
     
-    public static Result<ParseResult?> ParseProtoBufOpts(string query, LibPgQuery.PgQueryParserOptions parserOptions = LibPgQuery.PgQueryParserOptions.Default)
+    /// <summary>
+    /// Parse SQL and returns an AST 
+    /// </summary>
+    /// <param name="query"></param>
+    /// <param name="parserOptions"></param>
+    /// <returns></returns>
+    public static Result<ParseResult?> Parse(string query, ParserOptions parserOptions = ParserOptions.Default)
     {
         var result = LibPgQuery.pg_query_parse_protobuf_opts(query, (int)parserOptions);
 
@@ -174,11 +178,22 @@ public static class Parser
         }
     }
     
-    public static Task<Result<ParseResult?>> ParseProtoBufOptsAsync(string query, LibPgQuery.PgQueryParserOptions parserOptions = LibPgQuery.PgQueryParserOptions.Default, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Async parse SQL and returns an AST 
+    /// </summary>
+    /// <param name="query"></param>
+    /// <param name="parserOptions"></param>
+    /// <returns></returns>
+    public static Task<Result<ParseResult?>> ParseAsync(string query, ParserOptions parserOptions = ParserOptions.Default, CancellationToken cancellationToken = default)
     {
-        return RunAsync(() => ParseProtoBufOpts(query, parserOptions), cancellationToken);
+        return RunAsync(() => Parse(query, parserOptions), cancellationToken);
     }
     
+    /// <summary>
+    /// Parse PL/pgSQL function bodies and returns a JSON representation
+    /// </summary>
+    /// <param name="query"></param>
+    /// <returns></returns>
     public static Result<string> ParsePlpgsql(string query)
     {
         var result = LibPgQuery.pg_query_parse_plpgsql(query);
@@ -195,34 +210,25 @@ public static class Parser
         }
     }
 
+    /// <summary>
+    /// Async parse PL/pgSQL function bodies and returns a JSON representation
+    /// </summary>
+    /// <param name="query"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public static Task<Result<string>> ParsePlpgsqlAsync(string query, CancellationToken cancellationToken = default)
     {
         return RunAsync(() => ParsePlpgsql(query), cancellationToken);
     }
-    
-    public static Result<string> Fingerprint(string query)
-    {
-        var result = LibPgQuery.pg_query_fingerprint(query);
 
-        try
-        {
-            return result.error == IntPtr.Zero
-                ? Result<string>.Success(Marshal.PtrToStringUTF8(result.fingerprint_str) ?? string.Empty)
-                : Result<string>.Failure(ParseError(result.error));
-        }
-        finally
-        {
-            LibPgQuery.pg_query_free_fingerprint_result(result);
-        }
-    }
-    
-    public static Task<Result<string>> FingerprintAsync(string query, CancellationToken cancellationToken = default)
-    {
-        return RunAsync(() => Fingerprint(query), cancellationToken);
-    }
-
-    public static Result<string> FingerprintOpts(string query,
-        LibPgQuery.PgQueryParserOptions parserOptions = LibPgQuery.PgQueryParserOptions.Default)
+    /// <summary>
+    /// Generate a normalized hash (fingerprint) of a SQL statement — ignoring literals, whitespace, and minor variations
+    /// </summary>
+    /// <param name="query"></param>
+    /// <param name="parserOptions"></param>
+    /// <returns></returns>
+    public static Result<string> Fingerprint(string query,
+        ParserOptions parserOptions = ParserOptions.Default)
     {
         var result = LibPgQuery.pg_query_fingerprint_opts(query, (int)parserOptions);
         try
@@ -237,33 +243,46 @@ public static class Parser
         }
     }
     
-    public static Task<Result<string>> FingerprintOptsAsync(string query,
-        LibPgQuery.PgQueryParserOptions parserOptions = LibPgQuery.PgQueryParserOptions.Default,
+    /// <summary>
+    /// Async generate a normalized hash (fingerprint) of a SQL statement — ignoring literals, whitespace, and minor variations
+    /// </summary>
+    /// <param name="query"></param>
+    /// <param name="parserOptions"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static Task<Result<string>> FingerprintAsync(string query,
+        ParserOptions parserOptions = ParserOptions.Default,
         CancellationToken cancellationToken = default)
     {
-        return RunAsync(() => FingerprintOpts(query, parserOptions), cancellationToken);
+        return RunAsync(() => Fingerprint(query, parserOptions), cancellationToken);
     }
 
-    public static Result<List<QuerySplitStmt>> SplitWithScanner(string query)
+    /// <summary>
+    /// Split a SQL script containing multiple statements into an array of clean, standalone SQL statements
+    /// using lexical (token-based) analysis.
+    /// </summary>
+    /// <param name="query"></param>
+    /// <returns></returns>
+    public static Result<SplitResult> SplitWithScanner(string query)
     {
         var result = LibPgQuery.pg_query_split_with_scanner(query);
 
         try
         {
             if (result.error != IntPtr.Zero)
-                return Result<List<QuerySplitStmt>>.Failure(ParseError(result.error));
+                return Result<SplitResult>.Failure(ParseError(result.error));
             
             var nStmts = result.n_stmts;
-            var stmts = new List<QuerySplitStmt>();
+            var splitResult = new SplitResult();
             for (var i = 0; i < nStmts; i++)
             {
                 var stmtPtrPtr = Marshal.ReadIntPtr(result.stmts, i * IntPtr.Size);
                 var stmt = Marshal.PtrToStructure<LibPgQuery.PgQuerySplitStmt>(stmtPtrPtr);
                 var text = query.Substring(stmt.stmt_location, stmt.stmt_len);
-                stmts.Add(new QuerySplitStmt(stmt.stmt_location, stmt.stmt_len, text));
+                splitResult.Statements.Add(new SplitStmt(stmt.stmt_location, stmt.stmt_len, text));
             }
 
-            return Result<List<QuerySplitStmt>>.Success(stmts);
+            return Result<SplitResult>.Success(splitResult);
         }
         finally
         {
@@ -271,32 +290,46 @@ public static class Parser
         }
     }
 
-    public static Task<Result<List<QuerySplitStmt>>> SplitWithScannerAsync(string query,
+    /// <summary>
+    /// Async split a SQL script containing multiple statements into an array of clean, standalone SQL statements
+    /// using lexical (token-based) analysis.
+    /// </summary>
+    /// <param name="query"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static Task<Result<SplitResult>> SplitWithScannerAsync(string query,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => SplitWithScanner(query), cancellationToken);
     }
     
-    public static Result<List<QuerySplitStmt>> SplitWithParser(string query)
+    /// <summary>
+    /// Split a SQL script containing multiple statements into an array of clean, standalone SQL statements
+    /// using Postgres full parser
+    /// </summary>
+    /// <param name="query"></param>
+    /// <param name="query"></param>
+    /// <returns></returns>
+    public static Result<SplitResult> SplitWithParser(string query)
     {
         var result = LibPgQuery.pg_query_split_with_parser(query);
 
         try
         {
             if (result.error != IntPtr.Zero)
-                return Result<List<QuerySplitStmt>>.Failure(ParseError(result.error));
+                return Result<SplitResult>.Failure(ParseError(result.error));
             
             var nStmts = result.n_stmts;
-            var stmts = new List<QuerySplitStmt>();
+            var splitResult = new SplitResult();
             for (var i = 0; i < nStmts; i++)
             {
                 var stmtPtrPtr = Marshal.ReadIntPtr(result.stmts, i * IntPtr.Size);
                 var stmt = Marshal.PtrToStructure<LibPgQuery.PgQuerySplitStmt>(stmtPtrPtr);
                 var text = query.Substring(stmt.stmt_location, stmt.stmt_len);
-                stmts.Add(new QuerySplitStmt(stmt.stmt_location, stmt.stmt_len, text));
+                splitResult.Statements.Add(new SplitStmt(stmt.stmt_location, stmt.stmt_len, text));
             }
 
-            return Result<List<QuerySplitStmt>>.Success(stmts);
+            return Result<SplitResult>.Success(splitResult);
         }
         finally
         {   
@@ -304,13 +337,25 @@ public static class Parser
         }
     }
 
-    public static Task<Result<List<QuerySplitStmt>>> SplitWithParserAsync(string query,
+    /// <summary>
+    /// Async split a SQL script containing multiple statements into an array of clean, standalone SQL statements
+    /// using Postgres full parser
+    /// </summary>
+    /// <param name="query"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static Task<Result<SplitResult>> SplitWithParserAsync(string query,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => SplitWithParser(query), cancellationToken);
     }
 
-    public static Result<string> DeparseProtoBuf(ParseResult parseResult)
+    /// <summary>
+    /// Deparse AST back into a query string
+    /// </summary>
+    /// <param name="parseResult"></param>
+    /// <returns></returns>
+    public static Result<string> Deparse(ParseResult parseResult)
     {
         var updatedBytes = parseResult.ToByteArray();
         LibPgQuery.PgQueryProtobuf parseTree;
@@ -332,10 +377,16 @@ public static class Parser
         }
     }
 
-    public static Task<Result<string>> DeparseProtoBufAsync(ParseResult parseResult,
+    /// <summary>
+    /// Async deparse AST back into a query string 
+    /// </summary>
+    /// <param name="parseResult"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static Task<Result<string>> DeparseAsync(ParseResult parseResult,
         CancellationToken cancellationToken = default)
     {
-        return RunAsync(() => DeparseProtoBuf(parseResult), cancellationToken);
+        return RunAsync(() => Deparse(parseResult), cancellationToken);
     }
     
     private static byte[] ReadProtobuf(LibPgQuery.PgQueryProtobuf pbuf)

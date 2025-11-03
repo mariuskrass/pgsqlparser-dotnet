@@ -1,9 +1,8 @@
-namespace PgSqlParser;
-
-using System;
 using System.Runtime.InteropServices;
 
-public static class LibPgQuery
+namespace PgSqlParser;
+
+internal static class LibPgQuery
 {
     private const string DllName = "libpg_query";
 
@@ -94,22 +93,6 @@ public static class LibPgQuery
         public IntPtr normalized_query;
         public IntPtr error;
     }
-
-    [Flags]
-    public enum PgQueryParserOptions
-    {
-        Default = 0,
-        TypeName = 1,
-        PlpgsqlExpr = 2,
-        PlpgsqlAssign1 = 3,
-        PlpgsqlAssign2 = 4,
-        PlpgsqlAssign3 = 5,
-
-        // Flags
-        DisableBackslashQuote = 1 << 4, // 16
-        DisableStandardConformingStrings = 1 << 5, // 32
-        DisableEscapeStringWarning = 1 << 6 // 64
-    }
     
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern PgQueryNormalizeResult pg_query_normalize(string input);
@@ -174,8 +157,8 @@ public static class LibPgQuery
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void pg_query_free_fingerprint_result(PgQueryFingerprintResult result);
 
-    // [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    // public static extern void pg_query_exit();
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void pg_query_exit();
 
     public const string PgMajorVersion = "17";
     public const string PgVersion = "17.5";

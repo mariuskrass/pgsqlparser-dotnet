@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Shouldly;
 using Xunit;
@@ -18,7 +19,7 @@ public class ParserAsyncTests
     [Fact]
     public async Task Normalize()
     {
-        var items = ReadLines("normalize_tests.txt").ToArray();
+        var items = Utils.ReadLines("normalize_tests.txt").ToArray();
         for (var i = 0; i < items.Length; i += 2)
         {
             var query = items[i];
@@ -31,7 +32,7 @@ public class ParserAsyncTests
     [Fact]
     public async Task NormalizeUtility()
     {
-        var items = ReadLines("normalize_utility_tests.txt").ToArray();
+        var items = Utils.ReadLines("normalize_utility_tests.txt").ToArray();
         for (var i = 0; i < items.Length; i += 2)
         {
             var query = items[i];
@@ -44,41 +45,107 @@ public class ParserAsyncTests
     [Fact]
     public async Task Parse()
     {
-        var items = ReadLines("parse_tests.txt").ToArray();
+        var items = Utils.ReadLines("parse_tests.txt").ToArray();
         for (var i = 0; i < items.Length; i += 2)
         {
             var query = items[i];
-            var expected = items[i + 1];
+            var expected = ParseResult.Parser.ParseJson(items[i + 1]);
             var result = await Parser.ParseAsync(query);
-            result.Value.ShouldBe(expected);
+            result.Value.ShouldBeEquivalentTo(expected);
         }
     }
-    
+
     [Fact]
-    public async Task ParseOpts()
+    public async Task ParseWithOpts()
     {
-        var items = ReadLines("parse_with_opts_tests.txt").ToArray();
+        var items = Utils.ReadLines("parse_with_opts_tests.txt").ToArray();
         for (var i = 0; i < items.Length; i += 3)
         {
             var query = items[i];
-            var opts = (LibPgQuery.PgQueryParserOptions)int.Parse(items[i + 1]);
-            var expected = items[i + 2];
-            var result = await Parser.ParseOptsAsync(query, opts);
-            result.Value.ShouldBe(expected);
+            var opts = (ParserOptions)int.Parse(items[i + 1]);
+            var expected = ParseResult.Parser.ParseJson(items[i + 2]);
+            var result = await Parser.ParseAsync(query, opts);
+            result.Value.ShouldBeEquivalentTo(expected);
         }
     }
     
     [Fact]
-    public async Task DeParseOpts()
+    public async Task DeParse()
     {
-        var items = ReadLines("deparse_tests.txt").ToArray();
+        var items = Utils.ReadLines("deparse_tests.txt").ToArray();
         for (var i = 0; i < items.Length; i += 1)
         {
             var query = items[i];
-            var parseJsonStr = Parser.Parse(query).Value;
-            var result = await Parser.DeparseProtoBufAsync(ParseResult.Parser.ParseJson(parseJsonStr));
+            var parseResult = Parser.Parse(query).Value;
+            var result = await Parser.DeparseAsync(parseResult);
             var queryWithoutComments = Regex.Replace(result.Value!, @"/\*\s*Comment\s*\d+\s*\*/", "", RegexOptions.None);
             result.Value.ShouldBe(queryWithoutComments);
+        }
+    }
+    
+    [Fact]
+    public async Task SplitWithScanner()
+    {
+        var items = Utils.ReadLines("split_tests.txt").ToArray();
+        for (var i = 0; i < items.Length; i += 2)
+        {
+            var query = items[i].Replace("\\n", Environment.NewLine);
+            var expected = JsonSerializer.Deserialize<SplitResult>(items[i + 1]);
+            var result = await Parser.SplitWithScannerAsync(query);
+            result.Value.ShouldBeEquivalentTo(expected);
+        }
+    }
+    
+    [Fact]
+    public async Task SplitWithParser()
+    {
+        var items = Utils.ReadLines("split_tests.txt").ToArray();
+        for (var i = 0; i < items.Length; i += 2)
+        {
+            var query = items[i].Replace("\\n", Environment.NewLine);
+            var expected = JsonSerializer.Deserialize<SplitResult>(items[i + 1]);
+            var result = await Parser.SplitWithParserAsync(query);
+            result.Value.ShouldBeEquivalentTo(expected);
+        }
+    }
+    
+    [Fact]
+    public async Task Scan()
+    {
+        var items = Utils.ReadLines("scan_tests.txt").ToArray();
+        for (var i = 0; i < items.Length; i += 2)
+        {
+            var query = items[i].Replace("\\n", Environment.NewLine);
+            var expected = ScanResult.Parser.ParseJson(items[i + 1]);
+            var result = await Parser.ScanAsync(query);
+            result.Value.ShouldBeEquivalentTo(expected);
+        }
+    }
+    
+    [Fact]
+    public async Task Fingerprint()
+    {
+        var items = Utils.ReadLines("fingerprint_tests.txt").ToArray();
+        for (var i = 0; i < items.Length; i += 2)
+        {
+            var query = items[i].Replace("\\n", Environment.NewLine);
+            var expected = items[i + 1];
+            var result = await Parser.FingerprintAsync(query);
+            result.Value.ShouldBeEquivalentTo(expected);
+        }
+    }
+
+    [Fact]
+    public async Task FingerprintWithOpts()
+    {
+        var items = Utils.ReadLines("fingerprint_with_opts_tests.txt").ToArray();
+        for (var i = 0; i < items.Length; i += 3)
+        {
+            var query = items[i];
+            var opts = (ParserOptions)int.Parse(items[i + 1]);
+            var expected = items[i + 2];
+            var result = await Parser.FingerprintAsync(query, opts);
+            result.Value.ShouldBeEquivalentTo(expected);
         }
     }
 }
