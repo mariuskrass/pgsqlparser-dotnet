@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Shouldly;
@@ -87,10 +88,11 @@ public class ParserAsyncTests
     public async Task SplitWithScanner()
     {
         var items = Utils.ReadLines("split_tests.txt").ToArray();
-        for (var i = 0; i < items.Length; i += 2)
+        for (var i = 0; i < items.Length; i += 3)
         {
             var query = items[i].Replace("\\n", Environment.NewLine);
-            var expected = JsonSerializer.Deserialize<SplitResult>(items[i + 1]);
+            var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            var expected = JsonSerializer.Deserialize<SplitResult>(!isWindows ? items[i + 1] : items[i + 2]);
             var result = await Parser.SplitWithScannerAsync(query);
             result.Value.ShouldBeEquivalentTo(expected);
         }
@@ -100,10 +102,11 @@ public class ParserAsyncTests
     public async Task SplitWithParser()
     {
         var items = Utils.ReadLines("split_tests.txt").ToArray();
-        for (var i = 0; i < items.Length; i += 2)
+        for (var i = 0; i < items.Length; i += 3)
         {
             var query = items[i].Replace("\\n", Environment.NewLine);
-            var expected = JsonSerializer.Deserialize<SplitResult>(items[i + 1]);
+            var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            var expected = JsonSerializer.Deserialize<SplitResult>(!isWindows ? items[i + 1] : items[i + 2]);
             var result = await Parser.SplitWithParserAsync(query);
             result.Value.ShouldBeEquivalentTo(expected);
         }

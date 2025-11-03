@@ -1,6 +1,6 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Google.Protobuf;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -87,13 +87,13 @@ public class ParserTests
     public void SplitWithScanner()
     {
         var items = Utils.ReadLines("split_tests.txt").ToArray();
-        for (var i = 0; i < items.Length; i += 2)
+        for (var i = 0; i < items.Length; i += 3)
         {
             var query = items[i].Replace("\\n", Environment.NewLine);
-            var expected = JsonSerializer.Deserialize<SplitResult>(items[i + 1]);
+            var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            var expected = JsonSerializer.Deserialize<SplitResult>(!isWindows ? items[i + 1] : items[i + 2]);
             var result = Parser.SplitWithScanner(query);
-            _testOutputHelper.WriteLine(JsonSerializer.Serialize(result.Value));
-            // result.Value.ShouldBeEquivalentTo(expected);
+            result.Value.ShouldBeEquivalentTo(expected);
         }
     }
     
@@ -101,14 +101,13 @@ public class ParserTests
     public void SplitWithParser()
     {
         var items = Utils.ReadLines("split_tests.txt").ToArray();
-        for (var i = 0; i < items.Length; i += 2)
+        for (var i = 0; i < items.Length; i += 3)
         {
             var query = items[i].Replace("\\n", Environment.NewLine);
-            var expected = JsonSerializer.Deserialize<SplitResult>(items[i + 1]);
+            var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            var expected = JsonSerializer.Deserialize<SplitResult>(!isWindows ? items[i + 1] : items[i + 2]);
             var result = Parser.SplitWithParser(query);
-            _testOutputHelper.WriteLine(JsonSerializer.Serialize(expected));
-            _testOutputHelper.WriteLine(JsonSerializer.Serialize(result.Value));
-            // result.Value.ShouldBeEquivalentTo(expected);
+            result.Value.ShouldBeEquivalentTo(expected);
         }
     }
     
