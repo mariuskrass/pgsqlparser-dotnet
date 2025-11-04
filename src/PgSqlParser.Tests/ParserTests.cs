@@ -155,6 +155,7 @@ public class ParserTests
     public void ParsePlpgsql()
     {
         var sql = Utils.ReadFile("plpgsql_samples.sql");
+        sql = sql.Replace("\r\n", "\n");
         var result = Parser.ParsePlpgsql(sql);
         var resultVal = result.Value.Replace("\r\n", "\n");
         var expected = Utils.ReadFile("plpgsql_samples.expected.json");
