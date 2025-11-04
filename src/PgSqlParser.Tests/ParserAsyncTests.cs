@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Shouldly;
@@ -90,9 +89,8 @@ public class ParserAsyncTests
         var items = Utils.ReadLines("split_tests.txt").ToArray();
         for (var i = 0; i < items.Length; i += 3)
         {
-            var query = items[i].Replace("\\n", Environment.NewLine);
-            var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-            var expected = JsonSerializer.Deserialize<SplitResult>(!isWindows ? items[i + 1] : items[i + 2]);
+            var query = items[i].Replace("\\n", "\n");
+            var expected = JsonSerializer.Deserialize<SplitResult>(items[i + 1]);
             var result = await Parser.SplitWithScannerAsync(query);
             result.Value.ShouldBeEquivalentTo(expected);
         }
@@ -104,9 +102,8 @@ public class ParserAsyncTests
         var items = Utils.ReadLines("split_tests.txt").ToArray();
         for (var i = 0; i < items.Length; i += 3)
         {
-            var query = items[i].Replace("\\n", Environment.NewLine);
-            var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-            var expected = JsonSerializer.Deserialize<SplitResult>(!isWindows ? items[i + 1] : items[i + 2]);
+            var query = items[i].Replace("\\n", "\n");
+            var expected = JsonSerializer.Deserialize<SplitResult>(items[i + 1]);
             var result = await Parser.SplitWithParserAsync(query);
             result.Value.ShouldBeEquivalentTo(expected);
         }
@@ -118,7 +115,7 @@ public class ParserAsyncTests
         var items = Utils.ReadLines("scan_tests.txt").ToArray();
         for (var i = 0; i < items.Length; i += 2)
         {
-            var query = items[i].Replace("\\n", Environment.NewLine);
+            var query = items[i].Replace("\\n", "\n");
             var expected = ScanResult.Parser.ParseJson(items[i + 1]);
             var result = await Parser.ScanAsync(query);
             result.Value.ShouldBeEquivalentTo(expected);
@@ -131,7 +128,7 @@ public class ParserAsyncTests
         var items = Utils.ReadLines("fingerprint_tests.txt").ToArray();
         for (var i = 0; i < items.Length; i += 2)
         {
-            var query = items[i].Replace("\\n", Environment.NewLine);
+            var query = items[i].Replace("\\n", "\n");
             var expected = items[i + 1];
             var result = await Parser.FingerprintAsync(query);
             result.Value.ShouldBeEquivalentTo(expected);
