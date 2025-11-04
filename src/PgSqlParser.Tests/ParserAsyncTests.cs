@@ -156,6 +156,7 @@ public class ParserAsyncTests
     public async Task ParsePlpgsql()
     {
         var sql = Utils.ReadFile("plpgsql_samples.sql");
+        sql = sql.Replace("\r\n", "\n");
         var result = await Parser.ParsePlpgsqlAsync(sql);
         var resultVal = result.Value.Replace("\r\n", "\n");
         var expected = Utils.ReadFile("plpgsql_samples.expected.json");
