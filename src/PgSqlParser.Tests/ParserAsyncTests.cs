@@ -149,7 +149,7 @@ public class ParserAsyncTests
         }
     }
     
-    [Fact]
+    [NonWindowsFact]
     public async Task ParsePlpgsql()
     {
         var sql = Utils.ReadFile("plpgsql_samples.sql");

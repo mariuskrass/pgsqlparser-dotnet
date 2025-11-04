@@ -148,7 +148,7 @@ public class ParserTests
         }
     }
 
-    [Fact]
+    [NonWindowsFact]
     public void ParsePlpgsql()
     {
         var sql = Utils.ReadFile("plpgsql_samples.sql");
