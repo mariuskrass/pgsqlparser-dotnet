@@ -15,10 +15,10 @@ SELECT /* comment with ; */ 1; SELECT 2
 {"Statements":[{"Location":0,"Length":29,"Text":"SELECT /* comment with ; */ 1"},{"Location":30,"Length":9,"Text":" SELECT 2"}]}
 SELECT --othercomment with ;\n 1; SELECT 2
 {"Statements":[{"Location":0,"Length":31,"Text":"SELECT --othercomment with ;\n 1"},{"Location":32,"Length":9,"Text":" SELECT 2"}]}
-{"Statements":[{"Location":0,"Length":32,"Text":"SELECT --othercomment with ;\n 1"},{"Location":33,"Length":9,"Text":" SELECT 2"}]}
+{"Statements":[{"Location":0,"Length":32,"Text":"SELECT --othercomment with ;\r\n 1"},{"Location":33,"Length":9,"Text":" SELECT 2"}]}
 CREATE RULE x AS ON SELECT TO tbl DO (SELECT 1; SELECT 2)
 {"Statements":[{"Location":0,"Length":57,"Text":"CREATE RULE x AS ON SELECT TO tbl DO (SELECT 1; SELECT 2)"}]}
 {"Statements":[{"Location":0,"Length":57,"Text":"CREATE RULE x AS ON SELECT TO tbl DO (SELECT 1; SELECT 2)"}]}
 SELECT 1;\n;\n-- comment\nSELECT 2;\n;
 {"Statements":[{"Location":0,"Length":8,"Text":"SELECT 1"},{"Location":11,"Length":20,"Text":"\n-- comment\nSELECT 2"}]}
-{"Statements":[{"Location":0,"Length":9,"Text":"SELECT 1"},{"Location":12,"Length":22,"Text":"\n-- comment\nSELECT 2"}]}
+{"Statements":[{"Location":0,"Length":9,"Text":"SELECT 1"},{"Location":12,"Length":22,"Text":"\r\n-- comment\r\nSELECT 2"}]}
