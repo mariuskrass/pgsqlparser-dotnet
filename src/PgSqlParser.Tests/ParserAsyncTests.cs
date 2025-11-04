@@ -151,4 +151,15 @@ public class ParserAsyncTests
             result.Value.ShouldBeEquivalentTo(expected);
         }
     }
+    
+    [Fact]
+    public async Task ParsePlpgsql()
+    {
+        var sql = Utils.ReadFile("plpgsql_samples.sql");
+        var result = await Parser.ParsePlpgsqlAsync(sql);
+        var resultVal = result.Value.Replace("\r\n", "\n");
+        var expected = Utils.ReadFile("plpgsql_samples.expected.json");
+        expected = expected.Replace("\r\n", "\n");
+        resultVal.ShouldBe(expected);
+    }
 }

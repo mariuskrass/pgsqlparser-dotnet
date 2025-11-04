@@ -10,4 +10,9 @@ static class Utils
             yield return line;
         }
     }
+    
+    public static string ReadFile(string path)
+    {
+        return File.ReadAllText(path);
+    }
 }

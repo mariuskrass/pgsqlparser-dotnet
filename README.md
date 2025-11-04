@@ -14,7 +14,26 @@ Note that the libpg_query libs for all OS'es are already packaged with the assem
 
 ## Usage
 
-TODO
+All functions support both sync and async versions.
+
+### Normalize
+
+Transform DML query (SELECT, INSERT, UPDATE, DELETE) into a canonical form by replacing literal values (constants) with placeholders ($1, $2)
+
+```csharp
+using PgSqlParser;
+
+var query = "SELECT 1";
+var result = Parser.Normalize(query);
+
+// result: SELECT $1
+
+```
+
+### NormalizeUtility
+
+Transform DDL and other utility commands (CREATE TABLE, ALTER TABLE, VACUUM, and ANALYZE et.al.) into a canonical form by replacing literal values (constants) with placeholders ($1, $2)
+
 
 ## License
 
