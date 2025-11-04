@@ -26,7 +26,12 @@ using PgSqlParser;
 var query = "SELECT 1";
 var result = Parser.Normalize(query);
 
-// result: SELECT $1
+if (result.Error is null)
+{
+    Console.WriteLine(result.Value);
+}
+
+// Normalized value: SELECT $1
 
 ```
 
@@ -34,6 +39,170 @@ var result = Parser.Normalize(query);
 
 Transform DDL and other utility commands (CREATE TABLE, ALTER TABLE, VACUUM, and ANALYZE et.al.) into a canonical form by replacing literal values (constants) with placeholders ($1, $2)
 
+```csharp
+using PgSqlParser;
+
+var query = "CREATE ROLE postgres PASSWORD 'xyz'";
+var result = Parser.NormalizeUtility(query);
+
+if (result.Error is null)
+{
+    Console.WriteLine(result.Value);
+}
+
+// Normalized Utility value: CREATE ROLE postgres PASSWORD $1
+```
+
+### Parse
+
+Parse SQL and return an Protobuf based AST
+
+```csharp
+using PgSqlParser;
+
+var query = "SELECT 1; SELECT 2";
+        
+var result = Parser.Parse(query);
+
+if (result.Error is null)
+{
+    Console.WriteLine(result.Value);
+}
+
+// result.Value is a ParseResult AST object and the serialized JSON output is as below
+// { "version": 170005, "stmts": [ { "stmt": { "SelectStmt": { "targetList": [ { "ResTarget": { "val": { "A_Const": { "ival": { "ival": 1 }, "location": 7 } }, "location": 7 } } ], "limitOption": "LIMIT_OPTION_DEFAULT", "op": "SETOP_NONE" } } } ] }
+```
+
+`Parse` can also take `ParseOptions` as a list of flags i.e. `ParserOptions.DisableBackslashQuote | ParserOptions.DisableEscapeStringWarning`
+
+### ParsePlpgsql
+
+```csharp
+using PgSqlParser;
+
+var sql = """
+CREATE OR REPLACE FUNCTION get_all_foo() RETURNS SETOF foo AS
+$BODY$
+DECLARE
+r foo%rowtype;
+BEGIN
+FOR r IN
+SELECT * FROM foo WHERE fooid > 0
+  LOOP
+      -- can do some processing here
+      RETURN NEXT r; -- return current row of SELECT
+END LOOP;
+  RETURN;
+END
+$BODY$
+LANGUAGE plpgsql;
+""";
+
+var result = Parser.ParsePlpgsql(sql);
+
+if (result.Error is null)
+{
+    Console.WriteLine(result.Value);
+}
+
+// return JSON string
+// [{"PLpgSQL_function":{"datums":[{"PLpgSQL_var":{"refname":"found","datatype":{"PLpgSQL_type":{"typname":"pg_catalog.\"boolean\""}}}},{"PLpgSQL_var":{"refname":"r","lineno":3,"datatype":{"PLpgSQL_type":{"typname":"foo%rowtype"}}}},{"PLpgSQL_row":{"refname":"(unnamed row)","lineno":5,"fields":[{"name":"r","varno":1}]}}],"action":{"PLpgSQL_stmt_block":{"lineno":4,"body":[{"PLpgSQL_stmt_fors":{"lineno":5,"var":{"PLpgSQL_row":{"refname":"(unnamed row)","lineno":5,"fields":[{"name":"r","varno":1}]}},"body":[{"PLpgSQL_stmt_return_next":{"lineno":9}}],"query":{"PLpgSQL_expr":{"query":"SELECT * FROM foo WHERE fooid \u003e 0","parseMode":0}}}},{"PLpgSQL_stmt_return":{"lineno":11}}]}}}}]
+```
+
+### Fingerprint
+
+Generate a normalized hash (fingerprint) of a SQL statement — ignoring literals, whitespace, and minor variations
+
+```csharp
+using PgSqlParser;
+
+var query = "SELECT 1";
+var result = Parser.Fingerprint(query);
+
+if (result.Error is null)
+{
+    Console.WriteLine(result.Value);
+}
+
+/// output: 50fde20626009aba
+```
+
+### SplitWithScanner
+
+Split a SQL script containing multiple statements into an array of clean, standalone SQL statements using lexical (token-based) analysis.
+
+```csharp
+using PgSqlParser;
+
+var query = "SELECT 1; SELECT 2";
+var result = Parser.SplitWithScanner(query);
+
+if (result.Error is null)
+{
+    Console.WriteLine(JsonSerializer.Serialize(result.Value));
+}
+
+// Return a `SplitResult` and the respective serialized JSON string is as below:
+// {"Statements":[{"Location":0,"Length":8,"Text":"SELECT 1"},{"Location":9,"Length":9,"Text":" SELECT 2"}]}
+```
+
+### SplitWithParser
+
+Split a SQL script containing multiple statements into an array of clean, standalone SQL statements using Postgres full parser
+
+```csharp
+using PgSqlParser;
+
+var query = "SELECT 1; SELECT 2";
+var result = Parser.SplitWithParser(query);
+
+if (result.Error is null)
+{
+    Console.WriteLine(JsonSerializer.Serialize(result.Value));
+}
+
+// Return a `SplitResult` and the respective serialized JSON string is as below:
+// {"Statements":[{"Location":0,"Length":8,"Text":"SELECT 1"},{"Location":9,"Length":9,"Text":" SELECT 2"}]}
+```
+
+### Deparse
+
+Deparse AST back into a query string
+
+```csharp
+using PgSqlParser;
+
+var parseJson = """
+{ "version": 170005, "stmts": [ { "stmt": { "SelectStmt": { "targetList": [ { "ResTarget": { "val": { "A_Const": { "ival": { "ival": 1 }, "location": 7 } }, "location": 7 } } ], "limitOption": "LIMIT_OPTION_DEFAULT", "op": "SETOP_NONE" } } } ] }
+""";
+
+var parseResult = ParseResult.Parser.ParseJson(parseJson); ;
+var result = Parser.Deparse(parseResult);
+
+if (result.Error is null)
+{
+    Console.WriteLine(result.Value);
+}
+
+// Output: SELECT 1
+```
+
+### Parse Errors
+
+If the SQL has some error while parsing then the result contains an Error object which provides details of the error.
+
+```csharp
+using PgSqlParser;
+
+var query = "SELEC 1";
+var result = Parser.Parse(query);
+if (result.Error is not null)
+{
+    Console.WriteLine(result.Error.Message);
+} 
+
+// Output: syntax error at or near "SELEC"
+```
 
 ## License
 
