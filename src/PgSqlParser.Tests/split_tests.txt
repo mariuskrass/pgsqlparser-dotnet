@@ -21,4 +21,4 @@ CREATE RULE x AS ON SELECT TO tbl DO (SELECT 1; SELECT 2)
 {"Statements":[{"Location":0,"Length":57,"Text":"CREATE RULE x AS ON SELECT TO tbl DO (SELECT 1; SELECT 2)"}]}
 SELECT 1;\n;\n-- comment\nSELECT 2;\n;
 {"Statements":[{"Location":0,"Length":8,"Text":"SELECT 1"},{"Location":11,"Length":20,"Text":"\n-- comment\nSELECT 2"}]}
-{"Statements":[{"Location":0,"Length":8,"Text":"SELECT 1"},{"Location":11,"Length":22,"Text":"\r\n-- comment\r\nSELECT 2"}]}
+{"Statements":[{"Location":0,"Length":8,"Text":"SELECT 1"},{"Location":12,"Length":22,"Text":"\r\n-- comment\r\nSELECT 2"}]}
