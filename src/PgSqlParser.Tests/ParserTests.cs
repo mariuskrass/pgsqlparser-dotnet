@@ -86,7 +86,7 @@ public class ParserTests
     public void SplitWithScanner()
     {
         var items = Utils.ReadLines("split_tests.txt").ToArray();
-        for (var i = 0; i < items.Length; i += 3)
+        for (var i = 0; i < items.Length; i += 2)
         {
             var query = items[i].Replace("\\n", "\n");
             var expected = JsonSerializer.Deserialize<SplitResult>(items[i + 1]);
@@ -99,7 +99,7 @@ public class ParserTests
     public void SplitWithParser()
     {
         var items = Utils.ReadLines("split_tests.txt").ToArray();
-        for (var i = 0; i < items.Length; i += 3)
+        for (var i = 0; i < items.Length; i += 2)
         {
             var query = items[i].Replace("\\n", "\n");
             var expected = JsonSerializer.Deserialize<SplitResult>(items[i + 1]);
