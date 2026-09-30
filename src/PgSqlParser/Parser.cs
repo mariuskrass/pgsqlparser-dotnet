@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text;
 using Google.Protobuf;
 
 namespace PgSqlParser;
@@ -271,16 +272,8 @@ public static class Parser
         {
             if (result.error != IntPtr.Zero)
                 return Result<SplitResult>.Failure(ParseError(result.error));
-            
-            var nStmts = result.n_stmts;
-            var splitResult = new SplitResult();
-            for (var i = 0; i < nStmts; i++)
-            {
-                var stmtPtrPtr = Marshal.ReadIntPtr(result.stmts, i * IntPtr.Size);
-                var stmt = Marshal.PtrToStructure<LibPgQuery.PgQuerySplitStmt>(stmtPtrPtr);
-                var text = query.Substring(stmt.stmt_location, stmt.stmt_len);
-                splitResult.Statements.Add(new SplitStmt(stmt.stmt_location, stmt.stmt_len, text));
-            }
+
+            var splitResult = BuildSplitResult(query, result.stmts, result.n_stmts);
 
             return Result<SplitResult>.Success(splitResult);
         }
@@ -318,21 +311,13 @@ public static class Parser
         {
             if (result.error != IntPtr.Zero)
                 return Result<SplitResult>.Failure(ParseError(result.error));
-            
-            var nStmts = result.n_stmts;
-            var splitResult = new SplitResult();
-            for (var i = 0; i < nStmts; i++)
-            {
-                var stmtPtrPtr = Marshal.ReadIntPtr(result.stmts, i * IntPtr.Size);
-                var stmt = Marshal.PtrToStructure<LibPgQuery.PgQuerySplitStmt>(stmtPtrPtr);
-                var text = query.Substring(stmt.stmt_location, stmt.stmt_len);
-                splitResult.Statements.Add(new SplitStmt(stmt.stmt_location, stmt.stmt_len, text));
-            }
+
+            var splitResult = BuildSplitResult(query, result.stmts, result.n_stmts);
 
             return Result<SplitResult>.Success(splitResult);
         }
         finally
-        {   
+        {
             LibPgQuery.pg_query_free_split_result(result);
         }
     }
@@ -389,6 +374,30 @@ public static class Parser
         return RunAsync(() => Deparse(parseResult), cancellationToken);
     }
     
+    /// <summary>
+    /// Builds a <see cref="SplitResult"/> from the native stmts array, translating the
+    /// byte offsets/lengths reported by libpg_query (which operates on the UTF-8 encoded
+    /// query) into UTF-16 char offsets/lengths so they can be used with .NET string APIs
+    /// (e.g. Substring) against the original query string.
+    /// </summary>
+    private static SplitResult BuildSplitResult(string query, IntPtr stmts, int nStmts)
+    {
+        var utf8Bytes = Encoding.UTF8.GetBytes(query);
+        var splitResult = new SplitResult();
+
+        for (var i = 0; i < nStmts; i++)
+        {
+            var stmtPtrPtr = Marshal.ReadIntPtr(stmts, i * IntPtr.Size);
+            var stmt = Marshal.PtrToStructure<LibPgQuery.PgQuerySplitStmt>(stmtPtrPtr);
+
+            var charLocation = Encoding.UTF8.GetCharCount(utf8Bytes, 0, stmt.stmt_location);
+            var text = Encoding.UTF8.GetString(utf8Bytes, stmt.stmt_location, stmt.stmt_len);
+            splitResult.Statements.Add(new SplitStmt(charLocation, text.Length, text));
+        }
+
+        return splitResult;
+    }
+
     private static byte[] ReadProtobuf(LibPgQuery.PgQueryProtobuf pbuf)
     {
         var len = checked((int)pbuf.len);
