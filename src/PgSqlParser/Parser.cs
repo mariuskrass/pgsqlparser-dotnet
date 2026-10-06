@@ -35,6 +35,10 @@ public class SplitResult
     public List<SplitStmt> Statements { get; init; } = [];
 }
 
+/// <summary>
+/// <see cref="Location"/> and <see cref="Length"/> are UTF-16 code unit offsets into the split query.
+/// Scan tokens and parse tree locations use UTF-8 byte offsets.
+/// </summary>
 public record SplitStmt(int Location, int Length, string Text);
 
 [Flags]
@@ -58,6 +62,9 @@ public static class Parser
     public static string PgMajorVersion => LibPgQuery.PgMajorVersion;
     public static string PgVersion => LibPgQuery.PgVersion;
     public static int PgVersionNum => LibPgQuery.PgVersionNum;
+
+    private const byte Utf8ContinuationByteMask = 0xC0;
+    private const byte Utf8ContinuationBytePrefix = 0x80;
 
     /// <summary>
     /// Transform DML query (SELECT, INSERT, UPDATE, DELETE) into a canonical form
@@ -273,9 +280,7 @@ public static class Parser
             if (result.error != IntPtr.Zero)
                 return Result<SplitResult>.Failure(ParseError(result.error));
 
-            var splitResult = BuildSplitResult(query, result.stmts, result.n_stmts);
-
-            return Result<SplitResult>.Success(splitResult);
+            return BuildSplitResult(query, result.stmts, result.n_stmts);
         }
         finally
         {
@@ -312,9 +317,7 @@ public static class Parser
             if (result.error != IntPtr.Zero)
                 return Result<SplitResult>.Failure(ParseError(result.error));
 
-            var splitResult = BuildSplitResult(query, result.stmts, result.n_stmts);
-
-            return Result<SplitResult>.Success(splitResult);
+            return BuildSplitResult(query, result.stmts, result.n_stmts);
         }
         finally
         {
@@ -375,28 +378,50 @@ public static class Parser
     }
     
     /// <summary>
-    /// Builds a <see cref="SplitResult"/> from the native stmts array, translating the
-    /// byte offsets/lengths reported by libpg_query (which operates on the UTF-8 encoded
-    /// query) into UTF-16 char offsets/lengths so they can be used with .NET string APIs
-    /// (e.g. Substring) against the original query string.
+    /// Converts libpg_query's UTF-8 byte offsets into UTF-16 offsets of <paramref name="query"/>.
     /// </summary>
-    private static SplitResult BuildSplitResult(string query, IntPtr stmts, int nStmts)
+    private static Result<SplitResult> BuildSplitResult(string query, IntPtr stmts, int nStmts)
     {
         var utf8Bytes = Encoding.UTF8.GetBytes(query);
         var splitResult = new SplitResult();
+
+        // Statements are in ascending order, so counting resumes from the previous statement.
+        var lastByte = 0;
+        var lastChar = 0;
 
         for (var i = 0; i < nStmts; i++)
         {
             var stmtPtrPtr = Marshal.ReadIntPtr(stmts, i * IntPtr.Size);
             var stmt = Marshal.PtrToStructure<LibPgQuery.PgQuerySplitStmt>(stmtPtrPtr);
 
-            var charLocation = Encoding.UTF8.GetCharCount(utf8Bytes, 0, stmt.stmt_location);
-            var text = Encoding.UTF8.GetString(utf8Bytes, stmt.stmt_location, stmt.stmt_len);
-            splitResult.Statements.Add(new SplitStmt(charLocation, text.Length, text));
+            var byteStart = stmt.stmt_location;
+            var byteEnd = byteStart + stmt.stmt_len;
+            if (byteStart < lastByte || stmt.stmt_len < 0 || byteEnd > utf8Bytes.Length
+                || !IsUtf8CharBoundary(utf8Bytes, byteStart) || !IsUtf8CharBoundary(utf8Bytes, byteEnd))
+            {
+                return Result<SplitResult>.Failure(
+                    new Error(
+                        "Split statement range does not map to the query",
+                        null, null, 0, byteStart, null)
+                );
+            }
+
+            var charStart = lastChar + Encoding.UTF8.GetCharCount(utf8Bytes, lastByte, byteStart - lastByte);
+            var charLength = Encoding.UTF8.GetCharCount(utf8Bytes, byteStart, stmt.stmt_len);
+            splitResult.Statements.Add(new SplitStmt(charStart, charLength, query.Substring(charStart, charLength)));
+
+            lastByte = byteEnd;
+            lastChar = charStart + charLength;
         }
 
-        return splitResult;
+        return Result<SplitResult>.Success(splitResult);
     }
+
+    /// <summary>
+    /// Whether <paramref name="index"/> starts a UTF-8 sequence, i.e. is not a continuation byte.
+    /// </summary>
+    private static bool IsUtf8CharBoundary(byte[] utf8Bytes, int index) =>
+        index == utf8Bytes.Length || (utf8Bytes[index] & Utf8ContinuationByteMask) != Utf8ContinuationBytePrefix;
 
     private static byte[] ReadProtobuf(LibPgQuery.PgQueryProtobuf pbuf)
     {
