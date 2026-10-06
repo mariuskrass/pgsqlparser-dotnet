@@ -383,6 +383,7 @@ public static class Parser
     private static Result<SplitResult> BuildSplitResult(string query, IntPtr stmts, int nStmts)
     {
         var utf8Bytes = Encoding.UTF8.GetBytes(query);
+        var isAscii = utf8Bytes.Length == query.Length;
         var splitResult = new SplitResult();
 
         // Statements are in ascending order, so counting resumes from the previous statement.
@@ -406,8 +407,14 @@ public static class Parser
                 );
             }
 
-            var charStart = lastChar + Encoding.UTF8.GetCharCount(utf8Bytes, lastByte, byteStart - lastByte);
-            var charLength = Encoding.UTF8.GetCharCount(utf8Bytes, byteStart, stmt.stmt_len);
+            // Equal lengths mean every char is one byte, so byte offsets are already char offsets.
+            var charStart = isAscii
+                ? byteStart
+                : lastChar + Encoding.UTF8.GetCharCount(utf8Bytes, lastByte, byteStart - lastByte);
+            var charLength = isAscii
+                ? stmt.stmt_len
+                : Encoding.UTF8.GetCharCount(utf8Bytes, byteStart, stmt.stmt_len);
+
             splitResult.Statements.Add(new SplitStmt(charStart, charLength, query.Substring(charStart, charLength)));
 
             lastByte = byteEnd;
