@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
-using System.Text;
 using Google.Protobuf;
+using PgSqlParser.Utils;
 
 namespace PgSqlParser;
 
@@ -37,7 +37,7 @@ public class SplitResult
 
 /// <summary>
 /// <see cref="Location"/> and <see cref="Length"/> are UTF-16 code unit offsets into the split query.
-/// Scan tokens and parse tree locations use UTF-8 byte offsets.
+/// Parse tree locations use UTF-8 byte offsets.
 /// </summary>
 public record SplitStmt(int Location, int Length, string Text);
 
@@ -62,9 +62,6 @@ public static class Parser
     public static string PgMajorVersion => LibPgQuery.PgMajorVersion;
     public static string PgVersion => LibPgQuery.PgVersion;
     public static int PgVersionNum => LibPgQuery.PgVersionNum;
-
-    private const byte Utf8ContinuationByteMask = 0xC0;
-    private const byte Utf8ContinuationBytePrefix = 0x80;
 
     /// <summary>
     /// Transform DML query (SELECT, INSERT, UPDATE, DELETE) into a canonical form
@@ -144,9 +141,18 @@ public static class Parser
         var result = LibPgQuery.pg_query_scan(query);
         try
         {
-            return result.error == IntPtr.Zero
-                ? Result<ScanResult>.Success(ScanResult.Parser.ParseFrom(ReadProtobuf(result.pbuf)))
-                : Result<ScanResult>.Failure(ParseError(result.error));
+            if (result.error != IntPtr.Zero)
+                return Result<ScanResult>.Failure(ParseError(result.error));
+
+            var scanResult = ScanResult.Parser.ParseFrom(ReadProtobuf(result.pbuf));
+            var offsets = new Utf8OffsetMapper(query);
+            foreach (var token in scanResult.Tokens)
+            {
+                token.Start = offsets.ToCharOffset(token.Start);
+                token.End = offsets.ToCharOffset(token.End);
+            }
+
+            return Result<ScanResult>.Success(scanResult);
         }
         finally
         {
@@ -382,13 +388,8 @@ public static class Parser
     /// </summary>
     private static Result<SplitResult> BuildSplitResult(string query, IntPtr stmts, int nStmts)
     {
-        var utf8Bytes = Encoding.UTF8.GetBytes(query);
-        var isAscii = utf8Bytes.Length == query.Length;
+        var offsets = new Utf8OffsetMapper(query);
         var splitResult = new SplitResult();
-
-        // Statements are in ascending order, so counting resumes from the previous statement.
-        var lastByte = 0;
-        var lastChar = 0;
 
         for (var i = 0; i < nStmts; i++)
         {
@@ -397,8 +398,8 @@ public static class Parser
 
             var byteStart = stmt.stmt_location;
             var byteEnd = byteStart + stmt.stmt_len;
-            if (byteStart < lastByte || stmt.stmt_len < 0 || byteEnd > utf8Bytes.Length
-                || !IsUtf8CharBoundary(utf8Bytes, byteStart) || !IsUtf8CharBoundary(utf8Bytes, byteEnd))
+            if (byteStart < 0 || stmt.stmt_len < 0 || byteEnd > offsets.ByteLength
+                || !offsets.IsCharBoundary(byteStart) || !offsets.IsCharBoundary(byteEnd))
             {
                 return Result<SplitResult>.Failure(
                     new Error(
@@ -407,28 +408,13 @@ public static class Parser
                 );
             }
 
-            // Equal lengths mean every char is one byte, so byte offsets are already char offsets.
-            var charStart = isAscii
-                ? byteStart
-                : lastChar + Encoding.UTF8.GetCharCount(utf8Bytes, lastByte, byteStart - lastByte);
-            var charLength = isAscii
-                ? stmt.stmt_len
-                : Encoding.UTF8.GetCharCount(utf8Bytes, byteStart, stmt.stmt_len);
-
-            splitResult.Statements.Add(new SplitStmt(charStart, charLength, query.Substring(charStart, charLength)));
-
-            lastByte = byteEnd;
-            lastChar = charStart + charLength;
+            var charStart = offsets.ToCharOffset(byteStart);
+            var charEnd = offsets.ToCharOffset(byteEnd);
+            splitResult.Statements.Add(new SplitStmt(charStart, charEnd - charStart, query.Substring(charStart, charEnd - charStart)));
         }
 
         return Result<SplitResult>.Success(splitResult);
     }
-
-    /// <summary>
-    /// Whether <paramref name="index"/> starts a UTF-8 sequence, i.e. is not a continuation byte.
-    /// </summary>
-    private static bool IsUtf8CharBoundary(byte[] utf8Bytes, int index) =>
-        index == utf8Bytes.Length || (utf8Bytes[index] & Utf8ContinuationByteMask) != Utf8ContinuationBytePrefix;
 
     private static byte[] ReadProtobuf(LibPgQuery.PgQueryProtobuf pbuf)
     {
