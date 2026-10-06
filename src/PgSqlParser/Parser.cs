@@ -152,8 +152,11 @@ public static class Parser
             var offsets = new Utf8OffsetMapper(query);
             foreach (var token in scanResult.Tokens)
             {
-                token.Start = offsets.ToCharOffset(token.Start);
-                token.End = offsets.ToCharOffset(token.End);
+                if (!offsets.TryToCharOffset(token.Start, out var start) || !offsets.TryToCharOffset(token.End, out var end))
+                    return Result<ScanResult>.Failure(OffsetError());
+
+                token.Start = start;
+                token.End = end;
             }
 
             return Result<ScanResult>.Success(scanResult);
@@ -400,25 +403,23 @@ public static class Parser
             var stmtPtrPtr = Marshal.ReadIntPtr(stmts, i * IntPtr.Size);
             var stmt = Marshal.PtrToStructure<LibPgQuery.PgQuerySplitStmt>(stmtPtrPtr);
 
-            var byteStart = stmt.stmt_location;
-            var byteEnd = byteStart + stmt.stmt_len;
-            if (byteStart < 0 || stmt.stmt_len < 0 || byteEnd > offsets.ByteLength
-                || !offsets.IsCharBoundary(byteStart) || !offsets.IsCharBoundary(byteEnd))
+            var byteEnd = stmt.stmt_location + stmt.stmt_len;
+            if (stmt.stmt_len < 0
+                || !offsets.TryToCharOffset(stmt.stmt_location, out var charStart)
+                || !offsets.TryToCharOffset(byteEnd, out var charEnd))
             {
-                return Result<SplitResult>.Failure(
-                    new Error(
-                        "Split statement range does not map to the query",
-                        null, null, 0, byteStart, null)
-                );
+                return Result<SplitResult>.Failure(OffsetError());
             }
 
-            var charStart = offsets.ToCharOffset(byteStart);
-            var charEnd = offsets.ToCharOffset(byteEnd);
-            splitResult.Statements.Add(new SplitStmt(charStart, charEnd - charStart, query.Substring(charStart, charEnd - charStart)));
+            splitResult.Statements.Add(
+                new SplitStmt(charStart, charEnd - charStart, query.Substring(charStart, charEnd - charStart)));
         }
 
         return Result<SplitResult>.Success(splitResult);
     }
+
+    private static Error OffsetError() =>
+        new("libpg_query offset does not map to the query", null, null, 0, 0, null);
 
     private static byte[] ReadProtobuf(LibPgQuery.PgQueryProtobuf pbuf)
     {

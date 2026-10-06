@@ -23,19 +23,21 @@ internal sealed class Utf8OffsetMapper
         _isAscii = _utf8Bytes.Length == query.Length;
     }
 
-    public int ByteLength => _utf8Bytes.Length;
-
     /// <summary>
-    /// Whether <paramref name="byteOffset"/> starts a UTF-8 sequence, i.e. is not a continuation byte.
+    /// Maps <paramref name="byteOffset"/> to a UTF-16 offset. Returns false if it is outside the query
+    /// or does not start a UTF-8 sequence.
     /// </summary>
-    public bool IsCharBoundary(int byteOffset) =>
-        byteOffset == _utf8Bytes.Length
-        || (_utf8Bytes[byteOffset] & Utf8ContinuationByteMask) != Utf8ContinuationBytePrefix;
-
-    public int ToCharOffset(int byteOffset)
+    public bool TryToCharOffset(int byteOffset, out int charOffset)
     {
+        charOffset = 0;
+        if (byteOffset < 0 || byteOffset > _utf8Bytes.Length || !IsCharBoundary(byteOffset))
+            return false;
+
         if (_isAscii)
-            return byteOffset;
+        {
+            charOffset = byteOffset;
+            return true;
+        }
 
         if (byteOffset < _lastByte)
         {
@@ -45,6 +47,11 @@ internal sealed class Utf8OffsetMapper
 
         _lastChar += Encoding.UTF8.GetCharCount(_utf8Bytes, _lastByte, byteOffset - _lastByte);
         _lastByte = byteOffset;
-        return _lastChar;
+        charOffset = _lastChar;
+        return true;
     }
+
+    private bool IsCharBoundary(int byteOffset) =>
+        byteOffset == _utf8Bytes.Length
+        || (_utf8Bytes[byteOffset] & Utf8ContinuationByteMask) != Utf8ContinuationBytePrefix;
 }
