@@ -4,6 +4,10 @@ using PgSqlParser.Utils;
 
 namespace PgSqlParser;
 
+/// <summary>
+/// <see cref="CursorPos"/> is a 1-based position in Unicode code points, as PostgreSQL reports it.
+/// It is neither a UTF-8 byte offset nor a UTF-16 offset.
+/// </summary>
 public record Error(string? Message, string? FuncName, string? FileName, int LineNo, int CursorPos, string? Context);
 
 public readonly struct Result<T>
